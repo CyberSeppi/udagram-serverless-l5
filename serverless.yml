@@ -23,6 +23,8 @@ provider:
     THUMBNAILS_S3_BUCKET: serverless-jprentl-thumbnail-${self:provider.stage}
     AUTH_0_SECRET_ID: Auth0Secret-${self:provider.stage}
     AUTH_0_SECRET_FIELD: auth0Secret
+    #AUTH0_CERT: ${file(./env/environment_var.json):ENVIRONMENT.AUTH0_CERT}
+    AUTH0_CERT: ${file(./env/environment_var.txt)}
 
   iamRoleStatements:
     - Effect: Allow
@@ -82,6 +84,8 @@ custom:
         schema: ${file(models/create-image-request.json)}
 
 functions:
+  RS256Auth:
+      handler: src/lambda/auth/rs256Auth0Authorizer.handler
 
   Auth:
     handler: 'src/lambda/auth/auth0Authorizer.handler'
@@ -96,12 +100,14 @@ functions:
 
   CreateGroup:
     handler: src/lambda/http/createGroup.handler
+    environment:
+      AUTH0_CERT: ${self:provider.environment.AUTH0_CERT}
     events:
       - http:
           method: post
           path: groups
           cors: true
-          authorizer: Auth
+          authorizer: RS256Auth
           reqValidatorName: RequestBodyValidator
           documentation:
             summary: Create a new group
@@ -119,12 +125,14 @@ functions:
 
   CreateImage:
     handler: src/lambda/http/createImage.handler
+    environment:
+      AUTH0_CERT: ${self:provider.environment.AUTH0_CERT}
     events:
       - http:
           method: post
+          authorizer: RS256Auth
           path: groups/{groupId}/images
-          cors: true
-          authorizer: Auth
+          cors: true          
           reqValidatorName: RequestBodyValidator
           documentation:
             summary: Create a new image
